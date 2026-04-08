@@ -2,17 +2,27 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
   <title>TODO-LOCALSTORAGE</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="todo-container">
     <h1>TODO-LOCALSTORAGE</h1>
+
     <form id="task-form">
-      <input id="task-input" type="text" placeholder="Новая задача..." required />
+      <input id="task-input" type="text" placeholder="Новая задача..." required maxlength="500" autocomplete="off" />
       <button type="submit">Добавить</button>
     </form>
-    <ul id="task-list"></ul>
+
+    <div id="task-counter" class="task-counter"></div>
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <p>📋 Нет задач — добавьте первую!</p>
+    </div>
+
+    <ul id="task-list" role="list" aria-label="Список задач"></ul>
   </div>
   <script src="app.js"></script>
 </body>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>TODO-LOCALSTORAGE — Tests</title>
+</head>
+<body>
+  <h1>TODO-LOCALSTORAGE Tests</h1>
+  <div id="results"></div>
+
+  <script src="app.js"></script>
+  <script>
+    const results = document.getElementById('results');
+    let passed = 0, failed = 0;
+
+    function assert(condition, name) {
+      if (condition) {
+        passed++;
+        results.innerHTML += `<p style="color:green">✅ ${name}</p>`;
+      } else {
+        failed++;
+        results.innerHTML += `<p style="color:red">❌ ${name}</p>`;
+      }
+    }
+
+    // Clear localStorage for clean tests
+    localStorage.removeItem('todo-localstorage-tasks');
+
+    // Test 1: createTask creates valid object
+    const task = createTask('Test task');
+    assert(task.id && task.text === 'Test task' && !task.completed, 'createTask creates valid object');
+
+    // Test 2: createTask sanitizes HTML
+    const xssTask = createTask('<script>alert("xss")</script>');
+    assert(xssTask.text === '&lt;script&gt;alert("xss")&lt;/script&gt;', 'createTask sanitizes HTML');
+
+    // Test 3: saveTasks and loadTasks roundtrip
+    saveTasks([task]);
+    const loaded = loadTasks();
+    assert(loaded.length === 1 && loaded[0].text === 'Test task', 'save/load roundtrip works');
+
+    // Test 4: corrupt data returns empty
+    localStorage.setItem('todo-localstorage-tasks', 'not-json');
+    const corrupt = loadTasks();
+    assert(Array.isArray(corrupt) && corrupt.length === 0, 'corrupt data returns empty array');
+
+    // Test 5: addTask prevents duplicates
+    localStorage.removeItem('todo-localstorage-tasks');
+    addTask('Unique task');
+    addTask('Unique task');
+    const afterDup = loadTasks();
+    assert(afterDup.length === 1, 'addTask prevents duplicates');
+
+    // Test 6: toggleTask works
+    localStorage.removeItem('todo-localstorage-tasks');
+    saveTasks([{ id: 'test1', text: 'Toggle me', completed: false, createdAt: Date.now() }]);
+    toggleTask('test1');
+    const toggled = loadTasks();
+    assert(toggled[0].completed === true, 'toggleTask toggles completed');
+
+    // Test 7: deleteTask removes task
+    localStorage.removeItem('todo-localstorage-tasks');
+    saveTasks([{ id: 'del1', text: 'Delete me', completed: false, createdAt: Date.now() }]);
+    deleteTask('del1');
+    const afterDelete = loadTasks();
+    assert(afterDelete.length === 0, 'deleteTask removes task');
+
+    // Test 8: QuotaExceededError handling
+    const originalSetItem = localStorage.setItem;
+    localStorage.setItem = () => { throw new DOMException('Quota exceeded', 'QuotaExceededError'); };
+    const saved = saveTasks([{ id: 'q1', text: 'test', completed: false, createdAt: Date.now() }]);
+    localStorage.setItem = originalSetItem;
+    assert(saved === false, 'saveTasks returns false on QuotaExceededError');
+
+    // Test 9: migrateTasks adds missing fields
+    const oldData = [{ text: 'old task', completed: true }];
+    const migrated = migrateTasks(oldData);
+    assert(migrated[0].id && migrated[0].createdAt, 'migrateTasks adds missing fields');
+
+    // Test 10: sanitize escapes HTML
+    assert(sanitize('<img src=x onerror=alert(1)>') === '&lt;img src=x onerror=alert(1)&gt;', 'sanitize escapes HTML');
+
+    // Summary
+    results.innerHTML += `<hr><h2>Results: ${passed} passed, ${failed} failed (${passed + failed} total)</h2>`;
+
+    // Clean up
+    localStorage.removeItem('todo-localstorage-tasks');
+  </script>
+</body>
+</html>
