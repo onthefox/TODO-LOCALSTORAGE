@@ -1,22 +1,50 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="auto">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
   <title>TODO-LOCALSTORAGE</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="todo-container">
-    <h1>TODO-LOCALSTORAGE</h1>
+    <header class="todo-header">
+      <h1>TODO-LOCALSTORAGE</h1>
+      <button id="theme-toggle" type="button" class="btn-icon" aria-label="Переключить тему">🌙 Тёмная</button>
+    </header>
 
     <form id="task-form">
-      <input id="task-input" type="text" placeholder="Новая задача..." required maxlength="500" autocomplete="off" />
+      <input id="task-input" type="text" placeholder="Новая задача… #тег" required maxlength="500" autocomplete="off" aria-label="Текст задачи" />
+      <input id="due-input" type="date" aria-label="Срок выполнения (необязательно)" />
       <button type="submit">Добавить</button>
     </form>
 
-    <div id="task-counter" class="task-counter"></div>
+    <div class="toolbar" role="toolbar" aria-label="Фильтры и действия">
+      <div class="segmented" role="group" aria-label="Фильтр задач">
+        <button type="button" data-filter="all" class="seg-active" aria-pressed="true">Все</button>
+        <button type="button" data-filter="active" aria-pressed="false">Активные</button>
+        <button type="button" data-filter="completed" aria-pressed="false">Выполненные</button>
+      </div>
+      <div class="toolbar-right">
+        <label class="visually-hidden" for="sort-select">Сортировка</label>
+        <select id="sort-select" aria-label="Сортировка">
+          <option value="manual">Вручную</option>
+          <option value="date-desc">Сначала новые</option>
+          <option value="date-asc">Сначала старые</option>
+          <option value="alpha">По алфавиту</option>
+        </select>
+        <button id="clear-completed" type="button" class="btn-secondary">Убрать выполненные (0)</button>
+        <button id="export-btn" type="button" class="btn-secondary" aria-label="Экспорт задач в JSON">Экспорт</button>
+        <button id="import-btn" type="button" class="btn-secondary" aria-label="Импорт задач из JSON">Импорт</button>
+        <input id="import-file" type="file" accept="application/json,.json" class="visually-hidden" aria-hidden="true" tabindex="-1" />
+      </div>
+    </div>
+
+    <div id="tag-chips" class="tag-chips" role="group" aria-label="Фильтр по тегам" style="display:none;"></div>
+
+    <div id="task-counter" class="task-counter" role="status"></div>
 
     <div id="empty-state" class="empty-state" style="display:none;">
       <p>📋 Нет задач — добавьте первую!</p>
@@ -24,6 +52,13 @@
 
     <ul id="task-list" role="list" aria-label="Список задач"></ul>
   </div>
+
+  <div id="snackbar" class="snackbar" role="status" aria-live="polite">
+    <span id="snackbar-text"></span>
+    <button id="undo-btn" type="button" class="btn-secondary">Отменить</button>
+  </div>
+
+  <script src="core.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

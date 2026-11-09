@@ -1,90 +1,84 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="auto">
 <head>
   <meta charset="UTF-8">
-  <title>TODO-LOCALSTORAGE — Tests</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>TODO-LOCALSTORAGE — тесты</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .test-panel { max-width: 720px; margin: 16px auto 0; padding: 16px 20px; }
+    .test-summary { font-weight: 700; margin-bottom: 8px; }
+    .test-summary.all-pass { color: #15803d; }
+    .test-summary.has-fail { color: var(--overdue); }
+    .test-section { font-weight: 700; margin: 10px 0 4px; font-size: 0.9rem; }
+    .test-case { font-size: 0.85rem; padding: 2px 0; }
+    .test-case.fail { color: var(--overdue); }
+    .test-case .err { color: var(--text-muted); font-family: monospace; font-size: 0.78rem; }
+    .test-note { color: var(--text-muted); font-size: 0.8rem; margin-top: 10px; }
+  </style>
 </head>
 <body>
-  <h1>TODO-LOCALSTORAGE Tests</h1>
-  <div id="results"></div>
+  <!-- Test results -->
+  <section id="test-results" class="todo-container test-panel" aria-label="Результаты тестов">
+    <div id="test-summary" class="test-summary">Запуск тестов…</div>
+    <div id="test-output"></div>
+    <p class="test-note">Тесты выполняются локально в этом браузере. Логика — в <code>test.js</code> (TodoCore + TodoApp).</p>
+  </section>
 
+  <!-- Same DOM as index.html so app.js can initialize and render -->
+  <div class="todo-container">
+    <header class="todo-header">
+      <h1>TODO-LOCALSTORAGE</h1>
+      <button id="theme-toggle" type="button" class="btn-icon" aria-label="Переключить тему">🌙 Тёмная</button>
+    </header>
+
+    <form id="task-form">
+      <input id="task-input" type="text" placeholder="Новая задача… #тег" required maxlength="500" autocomplete="off" aria-label="Текст задачи" />
+      <input id="due-input" type="date" aria-label="Срок выполнения (необязательно)" />
+      <button type="submit">Добавить</button>
+    </form>
+
+    <div class="toolbar" role="toolbar" aria-label="Фильтры и действия">
+      <div class="segmented" role="group" aria-label="Фильтр задач">
+        <button type="button" data-filter="all" class="seg-active" aria-pressed="true">Все</button>
+        <button type="button" data-filter="active" aria-pressed="false">Активные</button>
+        <button type="button" data-filter="completed" aria-pressed="false">Выполненные</button>
+      </div>
+      <div class="toolbar-right">
+        <label class="visually-hidden" for="sort-select">Сортировка</label>
+        <select id="sort-select" aria-label="Сортировка">
+          <option value="manual">Вручную</option>
+          <option value="date-desc">Сначала новые</option>
+          <option value="date-asc">Сначала старые</option>
+          <option value="alpha">По алфавиту</option>
+        </select>
+        <button id="clear-completed" type="button" class="btn-secondary">Убрать выполненные (0)</button>
+        <button id="export-btn" type="button" class="btn-secondary" aria-label="Экспорт задач в JSON">Экспорт</button>
+        <button id="import-btn" type="button" class="btn-secondary" aria-label="Импорт задач из JSON">Импорт</button>
+        <input id="import-file" type="file" accept="application/json,.json" class="visually-hidden" aria-hidden="true" tabindex="-1" />
+      </div>
+    </div>
+
+    <div id="tag-chips" class="tag-chips" role="group" aria-label="Фильтр по тегам" style="display:none;"></div>
+
+    <div id="task-counter" class="task-counter" role="status"></div>
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <p>📋 Нет задач — добавьте первую!</p>
+    </div>
+
+    <ul id="task-list" role="list" aria-label="Список задач"></ul>
+  </div>
+
+  <div id="snackbar" class="snackbar" role="status" aria-live="polite">
+    <span id="snackbar-text"></span>
+    <button id="undo-btn" type="button" class="btn-secondary">Отменить</button>
+  </div>
+
+  <script src="core.js"></script>
   <script src="app.js"></script>
-  <script>
-    const results = document.getElementById('results');
-    let passed = 0, failed = 0;
-
-    function assert(condition, name) {
-      if (condition) {
-        passed++;
-        results.innerHTML += `<p style="color:green">✅ ${name}</p>`;
-      } else {
-        failed++;
-        results.innerHTML += `<p style="color:red">❌ ${name}</p>`;
-      }
-    }
-
-    // Clear localStorage for clean tests
-    localStorage.removeItem('todo-localstorage-tasks');
-
-    // Test 1: createTask creates valid object
-    const task = createTask('Test task');
-    assert(task.id && task.text === 'Test task' && !task.completed, 'createTask creates valid object');
-
-    // Test 2: createTask sanitizes HTML
-    const xssTask = createTask('<script>alert("xss")</script>');
-    assert(xssTask.text === '&lt;script&gt;alert("xss")&lt;/script&gt;', 'createTask sanitizes HTML');
-
-    // Test 3: saveTasks and loadTasks roundtrip
-    saveTasks([task]);
-    const loaded = loadTasks();
-    assert(loaded.length === 1 && loaded[0].text === 'Test task', 'save/load roundtrip works');
-
-    // Test 4: corrupt data returns empty
-    localStorage.setItem('todo-localstorage-tasks', 'not-json');
-    const corrupt = loadTasks();
-    assert(Array.isArray(corrupt) && corrupt.length === 0, 'corrupt data returns empty array');
-
-    // Test 5: addTask prevents duplicates
-    localStorage.removeItem('todo-localstorage-tasks');
-    addTask('Unique task');
-    addTask('Unique task');
-    const afterDup = loadTasks();
-    assert(afterDup.length === 1, 'addTask prevents duplicates');
-
-    // Test 6: toggleTask works
-    localStorage.removeItem('todo-localstorage-tasks');
-    saveTasks([{ id: 'test1', text: 'Toggle me', completed: false, createdAt: Date.now() }]);
-    toggleTask('test1');
-    const toggled = loadTasks();
-    assert(toggled[0].completed === true, 'toggleTask toggles completed');
-
-    // Test 7: deleteTask removes task
-    localStorage.removeItem('todo-localstorage-tasks');
-    saveTasks([{ id: 'del1', text: 'Delete me', completed: false, createdAt: Date.now() }]);
-    deleteTask('del1');
-    const afterDelete = loadTasks();
-    assert(afterDelete.length === 0, 'deleteTask removes task');
-
-    // Test 8: QuotaExceededError handling
-    const originalSetItem = localStorage.setItem;
-    localStorage.setItem = () => { throw new DOMException('Quota exceeded', 'QuotaExceededError'); };
-    const saved = saveTasks([{ id: 'q1', text: 'test', completed: false, createdAt: Date.now() }]);
-    localStorage.setItem = originalSetItem;
-    assert(saved === false, 'saveTasks returns false on QuotaExceededError');
-
-    // Test 9: migrateTasks adds missing fields
-    const oldData = [{ text: 'old task', completed: true }];
-    const migrated = migrateTasks(oldData);
-    assert(migrated[0].id && migrated[0].createdAt, 'migrateTasks adds missing fields');
-
-    // Test 10: sanitize escapes HTML
-    assert(sanitize('<img src=x onerror=alert(1)>') === '&lt;img src=x onerror=alert(1)&gt;', 'sanitize escapes HTML');
-
-    // Summary
-    results.innerHTML += `<hr><h2>Results: ${passed} passed, ${failed} failed (${passed + failed} total)</h2>`;
-
-    // Clean up
-    localStorage.removeItem('todo-localstorage-tasks');
-  </script>
+  <script src="test.js"></script>
 </body>
 </html>
